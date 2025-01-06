@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @AllArgsConstructor
@@ -14,65 +15,46 @@ import java.time.LocalDateTime;
 @Table(name = "members")
 public class Member {
 
-    // 회원 ID
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "member_id", nullable = false, updatable = false)
-    private Long Id;
+    private Long id;
 
-    // 아이디
-    @Column(name = "login_id", nullable = false)
+    @Column(name = "login_id", nullable = false, unique = true)
     private String loginId;
 
-    // 비밀번호
     @Column(name = "password", nullable = false)
     private String password;
 
-    // 이름
     @Column(name = "username", nullable = false)
     private String username;
 
-    // 이메일
-    @Column(name = "email", nullable = false)
+    @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    // 별명
-    @Column(name = "nickname", nullable = false)
+    @Column(name = "nickname", nullable = false, unique = true)
     private String nickname;
 
-    // 역할
     @Enumerated(EnumType.STRING)
-    @Column(name = "role")
+    @Column(name = "role", nullable = false)
     private Role role;
 
-    // 등록자
-    @Column(name = "created_by")
-    private String createdBy;
+    @OneToOne(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
+    private MemberState memberState;
 
-    // 수정자
-    @Column(name = "updated_by")
-    private String updatedBy;
+    @OneToOne(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Profile profile;
 
-    // 등록일
+    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SocialAccount> socialAccounts;
+
+    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<MemberTerm> memberTerms;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    // 수정일
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    public void updateFields(Member source) {
-        Field[] fields = this.getClass().getDeclaredFields();
-        for (Field field : fields) {
-            field.setAccessible(true);
-            try {
-                Object newValue = field.get(source);
-                if (newValue != null) {
-                    field.set(this, newValue);
-                }
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException("필드 업데이트 중 오류 발생: " + field.getName(), e);
-            }
-        }
-    }
 }
