@@ -3,9 +3,28 @@ package com.PickOne.domain.user.dto;
 import lombok.Getter;
 import lombok.Setter;
 
-@Getter
-@Setter
 public class MemberTermDto {
-    private Long id;
-    private Boolean isAgreed;
+
+    @Getter
+    @Setter
+    public static class MemberTermCreateDto {
+        private Long memberId;
+        private Long termId;
+        private Boolean isAgreed;
+    }
+
+    @Getter
+    @Setter
+    public static class MemberTermUpdateDto {
+        private Boolean isAgreed;
+    }
+
+    @Getter
+    @Setter
+    public class MemberTermResponseDto {
+        private Long id;
+        private Long memberId;
+        private Long termId;
+        private Boolean isAgreed;
+    }
 }

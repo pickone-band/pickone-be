@@ -1,58 +1,90 @@
 package com.PickOne.domain.user.service;
 
-import com.PickOne.domain.user.dto.MemberDto;
-import com.PickOne.domain.user.mapper.MemberMapper;
+
+import com.PickOne.domain.user.dto.MemberDto.*;
 import com.PickOne.domain.user.model.Member;
+import com.PickOne.domain.user.model.Role;
 import com.PickOne.domain.user.repository.MemberRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.PickOne.global.exception.BusinessException;
+import com.PickOne.global.exception.ErrorCode;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class MemberService {
 
     private final MemberRepository memberRepository;
-    private final MemberMapper memberMapper;
+    private final ModelMapper modelMapper;
     private final PasswordEncoder passwordEncoder;
 
-    public MemberDto create(MemberDto request) {
-        Member member = memberMapper.toEntity(request, passwordEncoder);
-        return memberMapper.toDto(memberRepository.save(member));
-    }
+        /** 회원가입 */
+        public MemberResponseDto createMember(MemberCreateDto dto) {
+            validateDuplicate(dto);
 
-    public MemberDto getById(Long id) {
-        Member member = memberRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("회원 정보를 찾을 수 없습니다. ID: " + id));
-        return memberMapper.toDto(member);
-    }
+            Member member = modelMapper.map(dto, Member.class);
+            member.setRole(Role.USER);
+            member.setPassword(passwordEncoder.encode(dto.getPassword()));
 
-    public List<MemberDto> getAll() {
-        return memberRepository.findAll()
-                .stream()
-                .map(memberMapper::toDto)
-                .toList();
-    }
+            Member saved = memberRepository.save(member);
+            // DTO 변환 시 id 수동 설정
+            MemberResponseDto responseDto = modelMapper.map(saved, MemberResponseDto.class);
+            responseDto.setId(saved.getId()); // id 직접 매핑
 
-    public MemberDto update(Long id, MemberDto request) {
-        Member member = memberRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("회원 정보를 찾을 수 없습니다. ID: " + id));
-
-        member.setUsername(request.getUsername());
-        member.setEmail(request.getEmail());
-        member.setNickname(request.getNickname());
-
-        if (request.getPassword() != null && !request.getPassword().isEmpty()) {
-            member.setPassword(passwordEncoder.encode(request.getPassword())); // 비밀번호 업데이트 시 암호화
+            return responseDto;
         }
 
-        return memberMapper.toDto(memberRepository.save(member));
+    private void validateDuplicate(MemberCreateDto dto) {
+        if (memberRepository.existsByLoginId(dto.getLoginId())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_LOGIN_ID);
+        }
+        if (memberRepository.existsByEmail(dto.getEmail())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
+        }
+        if (memberRepository.existsByNickname(dto.getNickname())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
+        }
     }
 
-    public void deleteById(Long id) {
-        memberRepository.deleteById(id);
+    @Transactional
+    public List<MemberResponseDto> getAllMembers() {
+        return memberRepository.findAll().stream()
+                .map(m -> modelMapper.map(m, MemberResponseDto.class))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public MemberResponseDto getMember(Long id) {
+        Member member = memberRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_INFO_NOT_FOUND));
+        return modelMapper.map(member, MemberResponseDto.class);
+    }
+
+    public MemberResponseDto updateMember(Long id, MemberUpdateDto dto) {
+        Member member = memberRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_INFO_NOT_FOUND));
+
+        // 닉네임 중복
+        if (!member.getNickname().equals(dto.getNickname())
+                && memberRepository.existsByNickname(dto.getNickname())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
+        }
+
+        member.setUsername(dto.getUsername());
+        member.setNickname(dto.getNickname());
+        return modelMapper.map(member, MemberResponseDto.class);
+    }
+
+    public void deleteMember(Long id) {
+        Member member = memberRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_INFO_NOT_FOUND));
+        memberRepository.delete(member);
     }
 }

@@ -1,49 +1,80 @@
 package com.PickOne.domain.user.service;
 
-import com.PickOne.domain.user.dto.MemberTermDto;
-import com.PickOne.domain.user.mapper.MemberTermMapper;
+import com.PickOne.domain.user.dto.MemberTermDto.*;
+import com.PickOne.domain.user.model.Member;
 import com.PickOne.domain.user.model.MemberTerm;
+import com.PickOne.domain.user.model.Term;
+import com.PickOne.domain.user.repository.MemberRepository;
 import com.PickOne.domain.user.repository.MemberTermRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.PickOne.domain.user.repository.TermRepository;
+import com.PickOne.global.exception.BusinessException;
+import com.PickOne.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class MemberTermService {
 
-    private final MemberTermRepository MemberTermRepository;
-    private final MemberTermMapper MemberTermMapper;
+    private final MemberTermRepository memberTermRepository;
+    private final MemberRepository memberRepository;
+    private final TermRepository termRepository;
+    private final ModelMapper modelMapper;
 
-    public MemberTermDto create(MemberTermDto request) {
-        MemberTerm MemberTerm = MemberTermMapper.toEntity(request);
-        return MemberTermMapper.toDto(MemberTermRepository.save(MemberTerm));
+    public MemberTermResponseDto createMemberTerm(MemberTermCreateDto dto) {
+        Member member = memberRepository.findById(dto.getMemberId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_INFO_NOT_FOUND));
+        Term term = termRepository.findById(dto.getTermId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.TERM_NOT_FOUND));
+
+        // 중복 동의 체크
+        if (memberTermRepository.existsByMemberAndTerm(member, term)) {
+            throw new BusinessException(ErrorCode.ALREADY_AGREED);
+        }
+        // 활성화 안 된 약관이면 -> 에러
+        if (!Boolean.TRUE.equals(term.getIsActive())) {
+            throw new BusinessException(ErrorCode.INACTIVE_TERM);
+        }
+
+        MemberTerm mt = modelMapper.map(dto, MemberTerm.class);
+        mt.setMember(member);
+        mt.setTerm(term);
+
+        MemberTerm saved = memberTermRepository.save(mt);
+        return modelMapper.map(saved, MemberTermResponseDto.class);
     }
 
-    public MemberTermDto getById(Long id) {
-        MemberTerm MemberTerm = MemberTermRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("회원 약관 정보를 찾을 수 없습니다. ID: " + id));
-        return MemberTermMapper.toDto(MemberTerm);
+    @Transactional(readOnly = true)
+    public MemberTermResponseDto getMemberTerm(Long id) {
+        MemberTerm mt = memberTermRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_TERM_NOT_FOUND));
+        return modelMapper.map(mt, MemberTermResponseDto.class);
     }
 
-    public List<MemberTermDto> getAll() {
-        return MemberTermRepository.findAll()
-                .stream()
-                .map(MemberTermMapper::toDto)
-                .toList();
+    @Transactional(readOnly = true)
+    public List<MemberTermResponseDto> getAllMemberTerms() {
+        return memberTermRepository.findAll().stream()
+                .map(mt -> modelMapper.map(mt, MemberTermResponseDto.class))
+                .collect(Collectors.toList());
     }
 
-    public MemberTermDto update(Long id, MemberTermDto request) {
-        MemberTerm MemberTerm = MemberTermRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("회원 약관 정보를 찾을 수 없습니다. ID: " + id));
+    public MemberTermResponseDto updateMemberTerm(Long id, MemberTermUpdateDto dto) {
+        MemberTerm mt = memberTermRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_TERM_NOT_FOUND));
 
-        MemberTerm.setIsAgreed(request.getIsAgreed());
-        return MemberTermMapper.toDto(MemberTermRepository.save(MemberTerm));
+        mt.setIsAgreed(dto.getIsAgreed());
+        return modelMapper.map(mt, MemberTermResponseDto.class);
     }
 
-    public void deleteById(Long id) {
-        MemberTermRepository.deleteById(id);
+    public void deleteMemberTerm(Long id) {
+        MemberTerm mt = memberTermRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_TERM_NOT_FOUND));
+        memberTermRepository.delete(mt);
     }
 }

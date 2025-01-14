@@ -1,52 +1,78 @@
 package com.PickOne.domain.user.service;
 
-import com.PickOne.domain.user.dto.ProfileDto;
-import com.PickOne.domain.user.mapper.ProfileMapper;
+import com.PickOne.domain.user.dto.ProfileDto.*;
+import com.PickOne.domain.user.model.Member;
 import com.PickOne.domain.user.model.Profile;
+import com.PickOne.domain.user.repository.MemberRepository;
 import com.PickOne.domain.user.repository.ProfileRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.PickOne.global.exception.BusinessException;
+import com.PickOne.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class ProfileService {
 
     private final ProfileRepository profileRepository;
-    private final ProfileMapper profileMapper;
+    private final MemberRepository memberRepository;
+    private final ModelMapper modelMapper;
 
-    public ProfileDto create(ProfileDto request) {
-        Profile profile = profileMapper.toEntity(request);
-        return profileMapper.toDto(profileRepository.save(profile));
+    public ProfileResponseDto createProfile(ProfileCreateDto dto) {
+        Member member = memberRepository.findById(dto.getMemberId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_INFO_NOT_FOUND));
+
+        if (dto.getPhoneNumber() != null && profileRepository.existsByPhoneNumber(dto.getPhoneNumber())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_PHONE_NUMBER);
+        }
+
+        Profile profile = modelMapper.map(dto, Profile.class);
+        profile.setMember(member);
+        Profile saved = profileRepository.save(profile);
+        return modelMapper.map(saved, ProfileResponseDto.class);
     }
 
-    public ProfileDto getById(Long id) {
+    @Transactional(readOnly = true)
+    public ProfileResponseDto getProfile(Long id) {
         Profile profile = profileRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("프로필을 찾을 수 없습니다. ID: " + id));
-        return profileMapper.toDto(profile);
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROFILE_NOT_FOUND));
+        return modelMapper.map(profile, ProfileResponseDto.class);
     }
 
-    public List<ProfileDto> getAll() {
-        return profileRepository.findAll()
-                .stream()
-                .map(profileMapper::toDto)
-                .toList();
+    @Transactional(readOnly = true)
+    public List<ProfileResponseDto> getAllProfiles() {
+        return profileRepository.findAll().stream()
+                .map(p -> modelMapper.map(p, ProfileResponseDto.class))
+                .collect(Collectors.toList());
     }
 
-    public ProfileDto update(Long id, ProfileDto request) {
+    public ProfileResponseDto updateProfile(Long id, ProfileUpdateDto dto) {
         Profile profile = profileRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("프로필을 찾을 수 없습니다. ID: " + id));
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROFILE_NOT_FOUND));
 
-        profile.setPhoneNumber(request.getPhoneNumber());
-        profile.setBirthDate(request.getBirthDate());
-        profile.setProfilePicUrl(request.getProfilePicUrl());
+        // 전화번호 변경 시 중복 검사
+        if (dto.getPhoneNumber() != null
+                && !dto.getPhoneNumber().equals(profile.getPhoneNumber())
+                && profileRepository.existsByPhoneNumber(dto.getPhoneNumber())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_PHONE_NUMBER);
+        }
 
-        return profileMapper.toDto(profileRepository.save(profile));
+        profile.setPhoneNumber(dto.getPhoneNumber());
+        profile.setBirthDate(dto.getBirthDate());
+        profile.setProfilePicUrl(dto.getProfilePicUrl());
+
+        return modelMapper.map(profile, ProfileResponseDto.class);
     }
 
-    public void deleteById(Long id) {
-        profileRepository.deleteById(id);
+    public void deleteProfile(Long id) {
+        Profile profile = profileRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROFILE_NOT_FOUND));
+        profileRepository.delete(profile);
     }
 }

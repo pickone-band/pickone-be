@@ -4,10 +4,28 @@ import com.PickOne.domain.user.model.SocialProvider;
 import lombok.Getter;
 import lombok.Setter;
 
-@Getter
-@Setter
 public class SocialAccountDto {
-    private Long id;
-    private SocialProvider provider;
-    private String providerUserId;
+
+    @Getter
+    @Setter
+    public static class SocialAccountCreateDto {
+        private Long memberId;
+        private SocialProvider provider;
+        private String providerUserId;
+    }
+
+    @Getter
+    @Setter
+    public static class SocialAccountUpdateDto {
+        private SocialProvider provider;
+        private String providerUserId;
+    }
+
+    @Getter @Setter
+    public static class SocialAccountResponseDto {
+        private Long id;
+        private Long memberId;
+        private SocialProvider provider;
+        private String providerUserId;
+    }
 }

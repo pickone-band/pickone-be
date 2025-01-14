@@ -1,8 +1,9 @@
 package com.PickOne.domain.user.controller;
 
-import com.PickOne.domain.user.dto.MemberTermDto;
+import com.PickOne.domain.user.dto.MemberTermDto.*;
 import com.PickOne.domain.user.service.MemberTermService;
-import jakarta.validation.Valid;
+import com.PickOne.global.exception.BaseResponse;
+import com.PickOne.global.exception.SuccessCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -10,35 +11,40 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/api/member-terms")
+@RequiredArgsConstructor
 public class MemberTermController {
 
-    private final MemberTermService MemberTermService;
+    private final MemberTermService memberTermService;
 
     @PostMapping
-    public ResponseEntity<MemberTermDto> createMemberTerm(@Valid @RequestBody MemberTermDto request) {
-        return ResponseEntity.ok(MemberTermService.create(request));
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<MemberTermDto> getMemberTerm(@PathVariable Long id) {
-        return ResponseEntity.ok(MemberTermService.getById(id));
+    public ResponseEntity<BaseResponse<MemberTermResponseDto>> create(@RequestBody MemberTermCreateDto dto) {
+        MemberTermResponseDto saved = memberTermService.createMemberTerm(dto);
+        return BaseResponse.success(saved);
     }
 
     @GetMapping
-    public ResponseEntity<List<MemberTermDto>> getAllMemberTerm() {
-        return ResponseEntity.ok(MemberTermService.getAll());
+    public ResponseEntity<BaseResponse<List<MemberTermResponseDto>>> getAll() {
+        List<MemberTermResponseDto> list = memberTermService.getAllMemberTerms();
+        return BaseResponse.success(list);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<BaseResponse<MemberTermResponseDto>> getOne(@PathVariable Long id) {
+        MemberTermResponseDto dto = memberTermService.getMemberTerm(id);
+        return BaseResponse.success(dto);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<MemberTermDto> updateMemberTerm(@PathVariable Long id, @Valid @RequestBody MemberTermDto request) {
-        return ResponseEntity.ok(MemberTermService.update(id, request));
+    public ResponseEntity<BaseResponse<MemberTermResponseDto>> update(@PathVariable Long id,
+                                                                      @RequestBody MemberTermUpdateDto dto) {
+        MemberTermResponseDto updated = memberTermService.updateMemberTerm(id, dto);
+        return BaseResponse.success(updated);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteMemberTerm(@PathVariable Long id) {
-        MemberTermService.deleteById(id);
-        return ResponseEntity.ok("회원 약관 정보 삭제 완료. ID: " + id);
+    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable Long id) {
+        memberTermService.deleteMemberTerm(id);
+        return BaseResponse.success(SuccessCode.DELETED);
     }
 }

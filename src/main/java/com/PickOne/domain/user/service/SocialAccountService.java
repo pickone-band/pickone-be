@@ -1,51 +1,76 @@
 package com.PickOne.domain.user.service;
 
-import com.PickOne.domain.user.dto.SocialAccountDto;
-import com.PickOne.domain.user.mapper.SocialAccountMapper;
+
+import com.PickOne.domain.user.dto.SocialAccountDto.*;
+import com.PickOne.domain.user.model.Member;
 import com.PickOne.domain.user.model.SocialAccount;
+import com.PickOne.domain.user.repository.MemberRepository;
 import com.PickOne.domain.user.repository.SocialAccountRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.PickOne.global.exception.BusinessException;
+import com.PickOne.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class SocialAccountService {
 
     private final SocialAccountRepository socialAccountRepository;
-    private final SocialAccountMapper socialAccountMapper;
+    private final MemberRepository memberRepository;
+    private final ModelMapper modelMapper;
 
-    public SocialAccountDto create(SocialAccountDto request) {
-        SocialAccount socialAccount = socialAccountMapper.toEntity(request);
-        return socialAccountMapper.toDto(socialAccountRepository.save(socialAccount));
+    public SocialAccountResponseDto createSocialAccount(SocialAccountCreateDto dto) {
+        Member member = memberRepository.findById(dto.getMemberId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_INFO_NOT_FOUND));
+
+        if (socialAccountRepository.existsByMemberIdAndProvider(member.getId(), dto.getProvider())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_SOCIAL_ACCOUNT);
+        }
+
+        SocialAccount account = modelMapper.map(dto, SocialAccount.class);
+        account.setMember(member);
+        SocialAccount saved = socialAccountRepository.save(account);
+        return modelMapper.map(saved, SocialAccountResponseDto.class);
     }
 
-    public SocialAccountDto getById(Long id) {
-        SocialAccount socialAccount = socialAccountRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("소셜 계정을 찾을 수 없습니다. ID: " + id));
-        return socialAccountMapper.toDto(socialAccount);
+    @Transactional(readOnly = true)
+    public SocialAccountResponseDto getSocialAccount(Long id) {
+        SocialAccount account = socialAccountRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SOCIAL_ACCOUNT_NOT_FOUND));
+        return modelMapper.map(account, SocialAccountResponseDto.class);
     }
 
-    public List<SocialAccountDto> getAll() {
-        return socialAccountRepository.findAll()
-                .stream()
-                .map(socialAccountMapper::toDto)
-                .toList();
+    @Transactional(readOnly = true)
+    public List<SocialAccountResponseDto> getAllSocialAccounts() {
+        return socialAccountRepository.findAll().stream()
+                .map(a -> modelMapper.map(a, SocialAccountResponseDto.class))
+                .collect(Collectors.toList());
     }
 
-    public SocialAccountDto update(Long id, SocialAccountDto request) {
-        SocialAccount socialAccount = socialAccountRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("소셜 계정을 찾을 수 없습니다. ID: " + id));
+    public SocialAccountResponseDto updateSocialAccount(Long id, SocialAccountUpdateDto dto) {
+        SocialAccount account = socialAccountRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SOCIAL_ACCOUNT_NOT_FOUND));
 
-        socialAccount.setProvider(request.getProvider());
-        socialAccount.setProviderUserId(request.getProviderUserId());
-
-        return socialAccountMapper.toDto(socialAccountRepository.save(socialAccount));
+        // provider 변경 시, 중복 검사
+        if (dto.getProvider() != null
+                && !dto.getProvider().equals(account.getProvider())
+                && socialAccountRepository.existsByMemberIdAndProvider(account.getMember().getId(), dto.getProvider())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_SOCIAL_ACCOUNT);
+        }
+        account.setProvider(dto.getProvider());
+        account.setProviderUserId(dto.getProviderUserId());
+        return modelMapper.map(account, SocialAccountResponseDto.class);
     }
 
-    public void deleteById(Long id) {
-        socialAccountRepository.deleteById(id);
+    public void deleteSocialAccount(Long id) {
+        SocialAccount account = socialAccountRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SOCIAL_ACCOUNT_NOT_FOUND));
+        socialAccountRepository.delete(account);
     }
 }
