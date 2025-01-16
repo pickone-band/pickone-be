@@ -25,16 +25,18 @@ public class MemberService {
     private final ModelMapper modelMapper;
     private final PasswordEncoder passwordEncoder;
 
-        /** 회원가입 */
-        public void createMember(MemberCreateDto dto) {
-            validateDuplicate(dto);
+    /**
+     * 회원가입
+     */
+    public void createMember(MemberCreateDto dto) {
+        validateDuplicate(dto);
 
-            Member member = modelMapper.map(dto, Member.class);
-            member.setRole(Role.USER);
-            member.setPassword(passwordEncoder.encode(dto.getPassword()));
+        Member member = modelMapper.map(dto, Member.class);
+        member.setRole(Role.USER);
+        member.setPassword(passwordEncoder.encode(dto.getPassword()));
 
-            Member saved = memberRepository.save(member);
-        }
+        Member saved = memberRepository.save(member);
+    }
 
     private void validateDuplicate(MemberCreateDto dto) {
         if (memberRepository.existsByLoginId(dto.getLoginId())) {
@@ -48,4 +50,17 @@ public class MemberService {
         }
     }
 
+    @Transactional
+    public List<MemberResponseDto> getAllMembers() {
+        return memberRepository.findAll().stream()
+                .map(m -> modelMapper.map(m, MemberResponseDto.class))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public MemberResponseDto getMember(Long id) {
+        Member member = memberRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_INFO_NOT_FOUND));
+        return modelMapper.map(member, MemberResponseDto.class);
+    }
 }
