@@ -1,0 +1,51 @@
+package com.PickOne.domain.user.service;
+
+
+import com.PickOne.domain.user.dto.MemberDto.*;
+import com.PickOne.domain.user.model.Member;
+import com.PickOne.domain.user.model.Role;
+import com.PickOne.domain.user.repository.MemberRepository;
+import com.PickOne.global.exception.BusinessException;
+import com.PickOne.global.exception.ErrorCode;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@Transactional
+@RequiredArgsConstructor
+public class MemberService {
+
+    private final MemberRepository memberRepository;
+    private final ModelMapper modelMapper;
+    private final PasswordEncoder passwordEncoder;
+
+        /** 회원가입 */
+        public void createMember(MemberCreateDto dto) {
+            validateDuplicate(dto);
+
+            Member member = modelMapper.map(dto, Member.class);
+            member.setRole(Role.USER);
+            member.setPassword(passwordEncoder.encode(dto.getPassword()));
+
+            Member saved = memberRepository.save(member);
+        }
+
+    private void validateDuplicate(MemberCreateDto dto) {
+        if (memberRepository.existsByLoginId(dto.getLoginId())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_LOGIN_ID);
+        }
+        if (memberRepository.existsByEmail(dto.getEmail())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
+        }
+        if (memberRepository.existsByNickname(dto.getNickname())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
+        }
+    }
+
+}
