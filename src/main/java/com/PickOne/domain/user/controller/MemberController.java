@@ -18,9 +18,9 @@ public class MemberController {
     private final MemberService memberService;
 
     @PostMapping
-    public ResponseEntity<BaseResponse<Void>> create(@RequestBody MemberCreateDto dto) {
+    public ResponseEntity<BaseResponse<Void>> signUp(@RequestBody MemberCreateDto dto) {
         memberService.createMember(dto);
-        return BaseResponse.success();
+        return BaseResponse.success(SuccessCode.CREATED);
     }
 
 }
