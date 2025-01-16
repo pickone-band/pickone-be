@@ -28,6 +28,7 @@ public class MemberService {
     /**
      * 회원가입
      */
+    @Transactional
     public void createMember(MemberCreateDto dto) {
         validateDuplicate(dto);
 
