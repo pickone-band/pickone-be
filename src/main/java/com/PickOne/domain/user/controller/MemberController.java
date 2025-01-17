@@ -23,4 +23,17 @@ public class MemberController {
         return BaseResponse.success(SuccessCode.CREATED);
     }
 
+    @GetMapping
+    public ResponseEntity<BaseResponse<List<MemberResponseDto>>> getAll() {
+        List<MemberResponseDto> list = memberService.getAllMembers();
+        return BaseResponse.success(SuccessCode.OK, list);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<BaseResponse<MemberResponseDto>> getOne(@PathVariable Long id) {
+        MemberResponseDto dto = memberService.getMember(id);
+        return BaseResponse.success(SuccessCode.OK, dto);
+    }
+
+
 }
