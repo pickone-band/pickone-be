@@ -76,10 +76,20 @@ public class MemberService {
                 && memberRepository.existsByNickname(dto.getNickname())) {
             throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
         }
-
-        member.setUsername(dto.getUsername());
-        member.setNickname(dto.getNickname());
+        if(member.getUsername() != null ){
+            member.setUsername(dto.getUsername());
+        }
+        if(member.getNickname() != null) {
+            member.setNickname(dto.getNickname());
+        }
         return modelMapper.map(member, MemberResponseDto.class);
+    }
+
+
+    public void deleteMember(Long id) {
+        Member member = memberRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_INFO_NOT_FOUND));
+        memberRepository.delete(member);
     }
 }
 

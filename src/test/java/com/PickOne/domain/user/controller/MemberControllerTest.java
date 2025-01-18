@@ -157,7 +157,7 @@ class MemberControllerTest {
                 .willReturn(updatedDto);
 
         // when & then
-        mockMvc.perform(put("/api/members/1")
+        mockMvc.perform(patch("/api/members/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -180,7 +180,7 @@ class MemberControllerTest {
                 .given(memberService).updateMember(eq(1L), any(MemberUpdateDto.class));
 
         // when & then
-        mockMvc.perform(put("/api/members/1")
+        mockMvc.perform(patch("/api/members/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -203,7 +203,7 @@ class MemberControllerTest {
                 .given(memberService).updateMember(eq(999L), any(MemberUpdateDto.class));
 
         // when & then
-        mockMvc.perform(put("/api/members/999")
+        mockMvc.perform(patch("/api/members/999")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
