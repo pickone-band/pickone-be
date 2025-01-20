@@ -1,6 +1,6 @@
 package com.PickOne;
 
-import com.PickOne.domain.user.model.entity.Member;
+import com.PickOne.domain.user.model.Member;
 import com.PickOne.domain.user.repository.MemberRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
