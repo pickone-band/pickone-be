@@ -35,5 +35,11 @@ public class MemberController {
         return BaseResponse.success(SuccessCode.OK, dto);
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable Long id) {
+        memberService.deleteMember(id);
+        return BaseResponse.success(SuccessCode.DELETED);
+    }
+
 
 }
