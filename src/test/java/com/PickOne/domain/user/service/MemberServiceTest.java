@@ -158,7 +158,85 @@ class MemberServiceTest {
     }
 
     @Test
-    @DisplayName("회원 삭제 - 성공")
+    @DisplayName("회원 정보 업데이트 성공 테스트")
+    void updateMember_Success() {
+        // given
+        Long memberId = 1L;
+        Member member = Member.builder()
+                .loginId("user1")
+                .password("password")
+                .username("기존유저")
+                .nickname("기존닉네임")
+                .email("user1@test.com")
+                .build();
+        memberRepository.save(member);
+
+        MemberUpdateDto updateDto = new MemberUpdateDto();
+        updateDto.setUsername("업데이트유저");
+        updateDto.setNickname("업데이트닉네임");
+
+        // when
+        MemberResponseDto result = memberService.updateMember(member.getId(), updateDto);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.getUsername()).isEqualTo("업데이트유저");
+        assertThat(result.getNickname()).isEqualTo("업데이트닉네임");
+
+        Member updatedMember = memberRepository.findById(member.getId()).orElseThrow();
+        assertThat(updatedMember.getUsername()).isEqualTo("업데이트유저");
+        assertThat(updatedMember.getNickname()).isEqualTo("업데이트닉네임");
+    }
+
+    @Test
+    @DisplayName("회원 정보 업데이트 실패 - 닉네임 중복")
+    void updateMember_DuplicateNickname() {
+        // given
+        Member member1 = Member.builder()
+                .loginId("user1")
+                .password("password")
+                .username("유저1")
+                .nickname("닉네임1")
+                .email("user1@test.com")
+                .build();
+        memberRepository.save(member1);
+
+        Member member2 = Member.builder()
+                .loginId("user2")
+                .password("password")
+                .username("유저2")
+                .nickname("닉네임2")
+                .email("user2@test.com")
+                .build();
+        memberRepository.save(member2);
+
+        MemberUpdateDto updateDto = new MemberUpdateDto();
+        updateDto.setUsername("유저1-업데이트");
+        updateDto.setNickname("닉네임2");
+
+        // when & then
+        assertThatThrownBy(() -> memberService.updateMember(member1.getId(), updateDto))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(ErrorCode.DUPLICATE_NICKNAME.getMessage());
+    }
+
+    @Test
+    @DisplayName("회원 정보 업데이트 실패 - 회원 없음")
+    void updateMember_NotFound() {
+        // given
+        Long invalidId = 999L;
+        MemberUpdateDto updateDto = new MemberUpdateDto();
+        updateDto.setUsername("유저1-업데이트");
+        updateDto.setNickname("닉네임1");
+
+        // when & then
+        assertThatThrownBy(() -> memberService.updateMember(invalidId, updateDto))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(ErrorCode.USER_INFO_NOT_FOUND.getMessage());
+    }
+  
+  @Test
+  @DisplayName("회원 삭제 - 성공")
     void deleteMember_success() {
         // given
         Member member = Member.builder()

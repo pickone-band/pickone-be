@@ -50,4 +50,4 @@ public class MemberDto {
         private Role role;
     }
 
-}
+
