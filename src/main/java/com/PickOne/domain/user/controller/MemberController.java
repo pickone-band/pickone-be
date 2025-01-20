@@ -35,5 +35,17 @@ public class MemberController {
         return BaseResponse.success(SuccessCode.OK, dto);
     }
 
+    @PatchMapping("/{id}")
+    public ResponseEntity<BaseResponse<MemberResponseDto>> update(@PathVariable Long id,
+                                                                  @RequestBody MemberUpdateDto dto) {
+        MemberResponseDto updated = memberService.updateMember(id, dto);
+        return BaseResponse.success(SuccessCode.UPDATED);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<BaseResponse<Void>> delete(@PathVariable Long id) {
+        memberService.deleteMember(id);
+        return BaseResponse.success(SuccessCode.DELETED);
+    }
 
 }

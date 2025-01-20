@@ -64,4 +64,32 @@ public class MemberService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_INFO_NOT_FOUND));
         return modelMapper.map(member, MemberResponseDto.class);
     }
+
+
+    @Transactional
+    public MemberResponseDto updateMember(Long id, MemberUpdateDto dto) {
+        Member member = memberRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_INFO_NOT_FOUND));
+
+        // 닉네임 중복
+        if (!member.getNickname().equals(dto.getNickname())
+                && memberRepository.existsByNickname(dto.getNickname())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
+        }
+        if(member.getUsername() != null ){
+            member.setUsername(dto.getUsername());
+        }
+        if(member.getNickname() != null) {
+            member.setNickname(dto.getNickname());
+        }
+        return modelMapper.map(member, MemberResponseDto.class);
+    }
+
+
+    public void deleteMember(Long id) {
+        Member member = memberRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_INFO_NOT_FOUND));
+        memberRepository.delete(member);
+    }
 }
+
