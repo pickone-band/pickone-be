@@ -234,5 +234,40 @@ class MemberServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining(ErrorCode.USER_INFO_NOT_FOUND.getMessage());
     }
+  
+  @Test
+  @DisplayName("회원 삭제 - 성공")
+    void deleteMember_success() {
+        // given
+        Member member = Member.builder()
+                .loginId("user1")
+                .password("pass1")
+                .username("유저1")
+                .email("user1@test.com")
+                .nickname("nick1")
+                .build();
+
+        Member savedMember = memberRepository.save(member);
+
+        // when
+        memberService.deleteMember(savedMember.getId());
+
+        // then
+        Optional<Member> deletedMember = memberRepository.findById(savedMember.getId());
+        assertThat(deletedMember).isEmpty();
+    }
+
+    @Test
+    @DisplayName("회원 삭제 - 실패 (존재하지 않는 회원)")
+    void deleteMember_notFound() {
+        // given
+        Long invalidId = 999L;
+
+        // when & then
+        assertThatThrownBy(() -> memberService.deleteMember(invalidId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(ErrorCode.USER_INFO_NOT_FOUND.getMessage());
+    }
+
 }
 

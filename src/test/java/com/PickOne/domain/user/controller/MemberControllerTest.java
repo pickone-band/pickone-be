@@ -141,6 +141,40 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.result.email").value("user1@test.com"));
     }
 
+    @Test
+    @DisplayName("회원 삭제 - 성공")
+    void deleteMemberTest_success() throws Exception {
+        // given
+        Long memberId = 1L;
+        doNothing().when(memberService).deleteMember(memberId);
+
+        // when & then
+        mockMvc.perform(delete("/api/members/{id}", memberId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.message").value(SuccessCode.DELETED.getMessage()));
+    }
+
+    @Test
+    @DisplayName("회원 삭제 - 실패 (존재하지 않는 회원)")
+    void deleteMemberTest_notFound() throws Exception {
+        // given
+        Long invalidId = 999L;
+        doThrow(new BusinessException(ErrorCode.USER_INFO_NOT_FOUND))
+                .when(memberService).deleteMember(invalidId);
+
+        // when & then
+        mockMvc.perform(delete("/api/members/{id}", invalidId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.message").value(ErrorCode.USER_INFO_NOT_FOUND.getMessage()));
+    }
+
+
 
     @Test
     @DisplayName("회원 정보 업데이트 성공 테스트")

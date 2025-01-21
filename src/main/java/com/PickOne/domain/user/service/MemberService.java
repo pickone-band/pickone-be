@@ -85,11 +85,12 @@ public class MemberService {
         return modelMapper.map(member, MemberResponseDto.class);
     }
 
-
+    @Transactional
     public void deleteMember(Long id) {
         Member member = memberRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_INFO_NOT_FOUND));
         memberRepository.delete(member);
     }
 }
+
 
